@@ -9,7 +9,23 @@ import contactRoutes from "./routes/contact.js";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL, // your Vercel URL here
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow requests with no origin (Postman/curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    return callback(new Error("Not allowed by CORS: " + origin));
+  }
+}));
+app.options("*", cors());
+
 app.use(express.json());
 app.use("/api/contact", contactRoutes);
 

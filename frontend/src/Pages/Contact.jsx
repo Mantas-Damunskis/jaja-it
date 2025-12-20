@@ -6,6 +6,7 @@ import {
   FaClock,
   FaArrowRight,
   FaCheckCircle,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 export default function Kontaktai() {
@@ -24,11 +25,13 @@ export default function Kontaktai() {
         { name: "Facebook", href: "#" },
         { name: "LinkedIn", href: "#" },
       ],
-      mapEmbed: `https://www.google.com/maps?q=Draugystės+g.+26,+Mažeikiai,+Lithuania&output=embed
-`,
+      mapEmbed:
+        "https://www.google.com/maps?q=Draugystės+g.+26,+Mažeikiai,+Lithuania&output=embed",
     }),
     []
   );
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const [form, setForm] = useState({
     name: "",
@@ -39,60 +42,76 @@ export default function Kontaktai() {
     consent: false,
   });
 
-  const [status, setStatus] = useState("idle"); // idle | ok
+  // idle | sending | ok | error
+  const [status, setStatus] = useState("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
   function update(key, value) {
     setForm((p) => ({ ...p, [key]: value }));
   }
 
- async function onSubmit(e) {
-  e.preventDefault();
+  function validate() {
+    if (!form.name.trim()) return "Įveskite vardą.";
+    if (!form.email.trim() || !form.email.includes("@"))
+      return "Įveskite teisingą el. paštą.";
+    if (!form.message.trim()) return "Parašykite žinutę.";
+    if (!form.consent) return "Turite sutikti su privatumo politika.";
+    return "";
+  }
 
-  // Front-end validation
-  if (!form.name.trim()) return alert("Įveskite vardą.");
-  if (!form.email.trim() || !form.email.includes("@")) return alert("Įveskite teisingą el. paštą.");
-  if (!form.message.trim()) return alert("Parašykite žinutę.");
-  if (!form.consent) return alert("Turite sutikti su privatumo politika.");
+  async function onSubmit(e) {
+    e.preventDefault();
 
-  try {
-    const res = await fetch("http://localhost:5000/api/contact", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        topic: form.topic,
-        message: form.message,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error("Nepavyko išsiųsti užklausos");
+    const msg = validate();
+    if (msg) {
+      setStatus("error");
+      setErrorMsg(msg);
+      return;
     }
 
-    setStatus("ok");
+    setStatus("sending");
+    setErrorMsg("");
 
-    // optional: clear form after success
-    setForm({
-      name: "",
-      email: "",
-      phone: "",
-      topic: "Kompiuterių remontas",
-      message: "",
-      consent: false,
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          topic: form.topic,
+          message: form.message,
+        }),
+      });
 
-    setTimeout(() => setStatus("idle"), 3000);
+      const data = await res.json().catch(() => ({}));
 
-  } catch (err) {
-    alert("Klaida siunčiant užklausą. Bandykite dar kartą.");
-    console.error(err);
+      if (!res.ok) {
+        throw new Error(data?.error || "Nepavyko išsiųsti užklausos.");
+      }
+
+      setStatus("ok");
+
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        topic: "Kompiuterių remontas",
+        message: "",
+        consent: false,
+      });
+
+      setTimeout(() => setStatus("idle"), 3500);
+    } catch (err) {
+      setStatus("error");
+      setErrorMsg(
+        err?.message ||
+          "Klaida siunčiant užklausą. Bandykite dar kartą."
+      );
+      console.error(err);
+    }
   }
-}
-
 
   return (
     <div className="k-page">
@@ -103,21 +122,28 @@ export default function Kontaktai() {
             <div className="k-pill">Kontaktai • Jaja IT</div>
             <h1>Susisiekime greitai</h1>
             <p>
-              Parašykite užklausą – atsakysime kuo greičiau. Taip pat galite skambinti arba
-              atvykti pagal susitarimą.
+              Parašykite užklausą – atsakysime kuo greičiau. Taip pat galite
+              skambinti arba atvykti pagal susitarimą.
             </p>
 
             <div className="k-actions">
-              <a className="btn primary" href={`tel:${contact.phone.replace(/\s/g, "")}`}>
+              <a
+                className="btn primary"
+                href={`tel:${contact.phone.replace(/\s/g, "")}`}
+              >
                 Skambinti <FaArrowRight />
               </a>
-              <a className="btn ghost" href={`mailto:${contact.email}`}>Rašyti el. paštu</a>
+              <a className="btn ghost" href={`mailto:${contact.email}`}>
+                Rašyti el. paštu
+              </a>
             </div>
 
             {/* Info cards */}
             <div className="k-cards">
               <div className="k-card">
-                <div className="k-ic"><FaPhoneAlt /></div>
+                <div className="k-ic">
+                  <FaPhoneAlt />
+                </div>
                 <div>
                   <div className="k-label">Telefonas</div>
                   <div className="k-value">{contact.phone}</div>
@@ -125,7 +151,9 @@ export default function Kontaktai() {
               </div>
 
               <div className="k-card">
-                <div className="k-ic"><FaEnvelope /></div>
+                <div className="k-ic">
+                  <FaEnvelope />
+                </div>
                 <div>
                   <div className="k-label">El. paštas</div>
                   <div className="k-value">{contact.email}</div>
@@ -133,7 +161,9 @@ export default function Kontaktai() {
               </div>
 
               <div className="k-card">
-                <div className="k-ic"><FaMapMarkerAlt /></div>
+                <div className="k-ic">
+                  <FaMapMarkerAlt />
+                </div>
                 <div>
                   <div className="k-label">Adresas</div>
                   <div className="k-value">{contact.address}</div>
@@ -141,7 +171,9 @@ export default function Kontaktai() {
               </div>
 
               <div className="k-card">
-                <div className="k-ic"><FaClock /></div>
+                <div className="k-ic">
+                  <FaClock />
+                </div>
                 <div>
                   <div className="k-label">Darbo laikas</div>
                   <div className="k-hours">
@@ -160,7 +192,13 @@ export default function Kontaktai() {
             <div className="k-socials">
               <span>Social:</span>
               {contact.socials.map((s) => (
-                <a key={s.name} href={s.href} className="k-social">
+                <a
+                  key={s.name}
+                  href={s.href}
+                  className="k-social"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   {s.name} <FaArrowRight />
                 </a>
               ))}
@@ -182,6 +220,7 @@ export default function Kontaktai() {
                     <input
                       value={form.name}
                       onChange={(e) => update("name", e.target.value)}
+                      placeholder="Jūsų vardas"
                     />
                   </div>
 
@@ -190,6 +229,7 @@ export default function Kontaktai() {
                     <input
                       value={form.email}
                       onChange={(e) => update("email", e.target.value)}
+                      placeholder="pvz. vardas@email.lt"
                     />
                   </div>
                 </div>
@@ -200,6 +240,7 @@ export default function Kontaktai() {
                     <input
                       value={form.phone}
                       onChange={(e) => update("phone", e.target.value)}
+                      placeholder="+370..."
                     />
                   </div>
 
@@ -238,17 +279,30 @@ export default function Kontaktai() {
                   Sutinku su privatumo politika
                 </label>
 
-                <button className="btn primary full" type="submit">
-                  Siųsti <FaArrowRight />
+                <button
+                  className="btn primary full"
+                  type="submit"
+                  disabled={status === "sending"}
+                >
+                  {status === "sending" ? "Siunčiama..." : "Siųsti"}{" "}
+                  <FaArrowRight />
                 </button>
 
                 {status === "ok" && (
                   <div className="k-success">
-                    <FaCheckCircle /> Užklausa paruošta! (vėliau prijungsim prie API)
+                    <FaCheckCircle /> ✅ Užklausa išsiųsta!
                   </div>
                 )}
 
-                
+                {status === "error" && (
+                  <div className="k-error">
+                    <FaExclamationTriangle /> {errorMsg}
+                  </div>
+                )}
+
+                <div className="k-fine">
+                  API: <span className="mono">{API_URL}</span>
+                </div>
               </form>
             </div>
           </div>
@@ -260,7 +314,7 @@ export default function Kontaktai() {
         <div className="k-map-inner">
           <div className="k-map-head">
             <h2>Kur mus rasti</h2>
-            <p>Raudonai pažymeta.</p>
+            <p>Raudonai pažymėta.</p>
           </div>
 
           <div className="k-map-frame">
@@ -275,15 +329,16 @@ export default function Kontaktai() {
       </section>
 
       <style>{`
-        /* ===== Base ===== */
         .k-page { padding: 0 0 80px; }
-        .btn { display:inline-flex; align-items:center; gap:10px; padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900; border: 1px solid transparent; }
+        .btn { display:inline-flex; align-items:center; gap:10px; padding: 10px 14px; border-radius: 12px; text-decoration:none; font-weight: 900; border: 1px solid transparent; cursor: pointer; }
         .btn.primary { background:#2faa43; color:#fff; box-shadow: 0 10px 30px rgba(47,170,67,0.22); }
         .btn.primary:hover { transform: translateY(-1px); }
         .btn.ghost { background:#fff; border-color:#e6e6e6; color:#111; }
         .btn.full { width: 100%; justify-content:center; }
+        .btn:disabled { opacity: .7; cursor: not-allowed; transform: none; }
 
-        /* ===== HERO ===== */
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
         .k-hero {
           padding: 44px 0 34px;
           background:
@@ -314,7 +369,6 @@ export default function Kontaktai() {
         .k-left p { margin: 0 0 16px; color:#3f3f3f; line-height: 1.7; max-width: 720px; }
         .k-actions { display:flex; gap: 12px; flex-wrap:wrap; margin-bottom: 18px; }
 
-        /* info cards */
         .k-cards {
           display:grid;
           grid-template-columns: repeat(2, 1fr);
@@ -345,13 +399,11 @@ export default function Kontaktai() {
         .k-hours { margin-top: 6px; display:flex; flex-direction:column; gap:6px; }
         .k-hour-row { display:flex; justify-content:space-between; gap: 10px; font-size: 13px; color:#333; }
 
-        /* socials */
         .k-socials { margin-top: 14px; display:flex; gap: 12px; align-items:center; flex-wrap: wrap; }
         .k-socials span { font-weight: 900; opacity: .7; }
         .k-social { color:#2faa43; text-decoration:none; font-weight: 900; display:inline-flex; align-items:center; gap: 8px; }
         .k-social:hover { text-decoration: underline; }
 
-        /* right glass form */
         .k-glass {
           background: rgba(255,255,255,0.66);
           border: 1px solid rgba(0,0,0,0.08);
@@ -376,10 +428,12 @@ export default function Kontaktai() {
         }
         .k-field textarea { resize: vertical; }
         .k-consent { display:flex; align-items:center; gap: 10px; font-size: 13px; font-weight: 800; opacity: .85; }
+
         .k-success { display:flex; align-items:center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(47,170,67,0.12); color:#1f6f2b; font-weight: 900; border: 1px solid rgba(47,170,67,0.18); }
+        .k-error { display:flex; align-items:center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(220,0,0,0.08); color:#7a0b0b; font-weight: 900; border: 1px solid rgba(220,0,0,0.16); }
+
         .k-fine { font-size: 12px; opacity: .65; line-height: 1.4; }
 
-        /* Map section */
         .k-map { padding: 44px 0 0; }
         .k-map-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
         .k-map-head h2 { margin: 0 0 6px; font-size: 26px; }
@@ -393,7 +447,6 @@ export default function Kontaktai() {
         }
         .k-map-frame iframe { width: 100%; height: 420px; border: 0; display:block; }
 
-        /* responsive */
         @media (max-width: 1050px) {
           .k-hero-inner { grid-template-columns: 1fr; }
           .k-row { grid-template-columns: 1fr; }
