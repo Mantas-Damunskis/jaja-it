@@ -1,15 +1,11 @@
 import pkg from "pg";
 const { Pool } = pkg;
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  console.error("❌ DATABASE_URL is missing in environment variables");
-}
+import { DATABASE_URL } from "./config.js";
 
 const pool = new Pool({
-  connectionString,
-  ssl: { rejectUnauthorized: false }, // ✅ important for Render Postgres
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // Render Postgres
 });
 
 export default pool;
