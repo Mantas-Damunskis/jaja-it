@@ -5,6 +5,8 @@ import Login from "./Pages/Login";
 import Register from "./Pages/Register";
 import Contact from "./Pages/Contact";
 import Navbar from "./components/Navbar";
+import Admin from "./Pages/Admin";
+
 
 function App() {
   return (
@@ -16,6 +18,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   );
